@@ -1,0 +1,112 @@
+#!/usr/bin/env bash
+
+# Possible parameters:
+#
+#   --load-fixtures     Load fixtures
+#   --no-load-fixtures  Disable fixtures loading
+
+source `pwd`/`dirname $0`/_km-functions.sh
+
+# 0=NO, 1=YES, 2=ASK
+LOAD_FIXTURES=2
+while [[ $# > 0 ]]
+    do
+    key="$1"
+
+    case $key in
+        # Load fixtures
+        --load-fixtures)
+        LOAD_FIXTURES=1
+        ;;
+        --no-load-fixtures)
+        LOAD_FIXTURES=0
+        ;;
+        # If you want using config parameter, eg: ./setup-km-project -s /etc ==> SEARCHPATH="/etc"
+        #    -s|--searchpath)
+        #    SEARCHPATH="$2"
+        #    shift # past argument
+        #    ;;
+        *)
+        # Nothing
+        ;;
+    esac
+    shift # past argument or value
+done
+
+# ======================================================================================================================
+echo_title "First of all we are checking the software environment"
+echo "Check required programs. If you meet permission error, try run this script with $(tput setaf 3)sudo$(tput setaf 7)!"
+# Check NodeJS is exist
+if [[ $(program_is_installed node) == 0 ]]; then
+    echo "NodeJS is required, but it is not installed! Please install it before starting setup."
+    exit 1
+else
+    echo "$(echo_pass NodeJS)"
+fi
+# Check gem is exist
+if [[ $(program_is_installed gem) == 0 ]]; then
+    echo "RubyGems is required, but it is not installed! Please install it before starting setup. Help: https://rubygems.org/pages/download"
+    exit 1
+else
+    echo "$(echo_pass RubyGems)"
+fi
+# Check bundler is exist
+if [[ $(program_is_installed bundler) == 0 ]]; then
+    echo "Bundler is required, but it is not installed! Please install it before starting setup. Help: http://bundler.io/"
+    exit 1
+else
+    echo "$(echo_pass Bundler)"
+fi
+
+npms=("bower" "gulp" "uglifyjs" "uglifycss")
+for npm in "${npms[@]}"
+do
+    if [[ $(program_is_installed $npm) == 0 ]]; then
+        echo "Try to install $npm npm package..."
+        npm install -g $npm
+    else
+        echo "$(echo_pass $npm)"
+    fi
+done
+
+# ======================================================================================================================
+echo_title "Run 'app/console doctrine:database:create' command..."
+app/console doctrine:database:create --if-not-exists
+
+echo_title "Build database..."
+app/console doctrine:migrations:migrate --no-interaction
+
+echo_title "Load fixtures"
+if [[ ${LOAD_FIXTURES} == 2 ]]; then
+    app/console doctrine:fixtures:load
+elif [[ ${LOAD_FIXTURES} == 1 ]]; then
+    app/console doctrine:fixtures:load --no-interaction
+else
+    echo "Don't load fixtures"
+fi
+
+# after the web/uploads directory has been created
+if [ -d "web/uploads" ]; then
+    HTTPDUSER=`ps axo user,comm | grep -E '[a]pache|[h]ttpd|[_]www|[w]ww-data|[n]ginx' | grep -v root | head -1 | cut -d\  -f1`
+    chmod -R 0777 web/uploads
+    setfacl -R -m u:"$HTTPDUSER":rwX -m u:`whoami`:rwX web/uploads
+    setfacl -dR -m u:"$HTTPDUSER":rwX -m u:`whoami`:rwX web/uploads
+fi
+
+# ======================================================================================================================
+# The </dev/null fix the "read: read error: 0: Resource temporarily unavailable" error!
+echo_title "Install other dependencies... (Bundler, NPM, Bower, Gulp)"
+bundle install </dev/null
+npm install </dev/null
+bower install </dev/null
+gulp build </dev/null
+rm -rf /tmp/gulp-ruby-sass
+
+# ======================================================================================================================
+app/console kuma:search:populate full
+
+# ======================================================================================================================
+echo_title "Install and dump assets"
+app/console assets:install --symlink
+app/console assetic:dump
+app/console assetic:dump -e prod

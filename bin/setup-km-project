@@ -1,0 +1,181 @@
+#!/usr/bin/env bash
+
+# Possible parameters:
+#
+#   --allow-defaults    Allow default parameters
+#   --bundle-namespace  Namespace of Kunstmaan generated bundle
+#   --use-migration     Using migration
+#   --no-use-migration  Using doctrine schema update instead of migration
+#   --load-fixtures     Load fixtures
+#   --no-load-fixtures  Disable fixtures loading
+
+source `pwd`/`dirname $0`/_km-functions.sh
+
+ALLOW_DEFAULTS=0
+# 0=NO, 1=YES, 2=ASK
+USE_MIGRATION=2
+# 0=NO, 1=YES, 2=ASK
+LOAD_FIXTURES=2
+
+BUNDLE_NAMESPACE=""
+BUNDLE_NAMESPACE_IS_VALID=0
+while [[ $# > 0 ]]
+    do
+    key="$1"
+
+    case $key in
+        --allow-defaults)
+        ALLOW_DEFAULTS=1
+        ;;
+        # Using migration
+        --use-migration)
+        USE_MIGRATION=1
+        ;;
+        # Using schema update instead of migration
+        --no-use-migration)
+        USE_MIGRATION=0
+        ;;
+        # Load fixtures
+        --load-fixtures)
+        LOAD_FIXTURES=1
+        ;;
+        --no-load-fixtures)
+        LOAD_FIXTURES=0
+        ;;
+        --bundle-namespace)
+        BUNDLE_NAMESPACE="$2"
+        if [[ ${BUNDLE_NAMESPACE} =~ ^[a-zA-Z_][0-9a-zA-Z_]*/[a-zA-Z_][0-9a-zA-Z_]*Bundle$ ]] ; then
+            BUNDLE_NAMESPACE_IS_VALID=1
+        fi
+        shift
+        ;;
+        # If you want using config parameter, eg: ./setup-km-project -s /etc ==> SEARCHPATH="/etc"
+        #    -s|--searchpath)
+        #    SEARCHPATH="$2"
+        #    shift # past argument
+        #    ;;
+        *)
+        # Nothing
+        ;;
+    esac
+    shift # past argument or value
+done
+
+# ======================================================================================================================
+echo_title "First of all we are checking the software environment"
+echo "Check required programs. If you meet permission error, try run this script with $(tput setaf 3)sudo$(tput setaf 7)!"
+# Check NodeJS is exist
+if [[ $(program_is_installed node) == 0 ]]; then
+    echo "NodeJS is required, but it is not installed! Please install it before starting setup."
+    exit 1
+else
+    echo "$(echo_pass NodeJS)"
+fi
+# Check gem is exist
+if [[ $(program_is_installed gem) == 0 ]]; then
+    echo "RubyGems is required, but it is not installed! Please install it before starting setup. Help: https://rubygems.org/pages/download"
+    exit 1
+else
+    echo "$(echo_pass RubyGems)"
+fi
+# Check bundler is exist
+if [[ $(program_is_installed bundler) == 0 ]]; then
+    echo "Bundler is required, but it is not installed! Please install it before starting setup. Help: http://bundler.io/"
+    exit 1
+else
+    echo "$(echo_pass Bundler)"
+fi
+
+npms=("bower" "gulp" "uglifyjs" "uglifycss")
+for npm in "${npms[@]}"
+do
+    if [[ $(program_is_installed $npm) == 0 ]]; then
+        echo "Try to install $npm npm package..."
+        npm install -g $npm
+    else
+        echo "$(echo_pass $npm)"
+    fi
+done
+
+# ======================================================================================================================
+echo_title "Run 'app/console kuma:generate:bundle' command..."
+if [[ ${BUNDLE_NAMESPACE_IS_VALID} == 1 ]] ; then
+    app/console kuma:generate:bundle --namespace=${BUNDLE_NAMESPACE} --dir=src --no-interaction
+else
+    app/console kuma:generate:bundle
+fi
+
+echo_title "Run 'app/console kuma:generate:default-site' command..."
+if [[ ${ALLOW_DEFAULTS} == 1 ]] ; then
+    app/console kuma:generate:default-site --no-interaction
+else
+    app/console kuma:generate:default-site
+fi
+
+echo_title "Run 'app/console doctrine:database:create' command..."
+app/console doctrine:database:create --if-not-exists
+
+echo_title "Build database..."
+if [[ ${USE_MIGRATION} == 2 ]]
+then
+    echo "You can choice a workflow. You want to use database migration (create migration file and run it - preferred) OR just run 'doctrine:schema:create' command."
+    read -p "Do you want to use database migration? (Y/n) " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[nN]$ ]]
+    then
+        USE_MIGRATION=0
+    else
+        USE_MIGRATION=1
+    fi
+fi
+
+if [[ ${USE_MIGRATION} == 0 ]]
+then
+    app/console doctrine:schema:create
+else
+    app/console doctrine:migrations:diff
+    app/console doctrine:migrations:migrate --no-interaction
+fi
+
+echo_title "Load fixtures"
+if [[ ${LOAD_FIXTURES} == 2 ]]; then
+    app/console doctrine:fixtures:load
+elif [[ ${LOAD_FIXTURES} == 1 ]]; then
+    app/console doctrine:fixtures:load --no-interaction
+else
+    echo "Don't load fixtures"
+fi
+
+# after the web/uploads directory has been created
+if [ -d "web/uploads" ]; then
+    HTTPDUSER=`ps axo user,comm | grep -E '[a]pache|[h]ttpd|[_]www|[w]ww-data|[n]ginx' | grep -v root | head -1 | cut -d\  -f1`
+    chmod -R 0777 web/uploads
+    setfacl -R -m u:"$HTTPDUSER":rwX -m u:`whoami`:rwX web/uploads
+    setfacl -dR -m u:"$HTTPDUSER":rwX -m u:`whoami`:rwX web/uploads
+fi
+
+## Optionaly: create admin behat tests
+echo_title "Run 'app/console kuma:generate:admin-tests' command..."
+if [[ ${BUNDLE_NAMESPACE_IS_VALID} == 1 ]]; then
+    app/console kuma:generate:admin-tests --namespace=${BUNDLE_NAMESPACE} --no-interaction
+else
+    app/console kuma:generate:admin-tests
+fi
+
+# ======================================================================================================================
+# The </dev/null fix the "read: read error: 0: Resource temporarily unavailable" error!
+echo_title "Install other dependencies... (Bundler, NPM, Bower, Gulp)"
+bundle install </dev/null
+npm install </dev/null
+bower install </dev/null
+gulp build </dev/null
+rm -rf /tmp/gulp-ruby-sass
+
+# ======================================================================================================================
+app/console kuma:search:populate full
+
+# ======================================================================================================================
+echo_title "Install and dump assets"
+app/console assets:install --symlink
+app/console assetic:dump
+app/console assetic:dump -e prod

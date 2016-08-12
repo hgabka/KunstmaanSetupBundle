@@ -1,0 +1,19 @@
+{
+    "name": "hgabka/kunstmaan-setup-bundle",
+    "require": {
+        "kunstmaan/bundles-cms": "dev-master"
+    },
+    "authors": [
+        {
+            "name": "Gabe",
+            "email": "hgabka@gmail.com"
+        }
+    ],
+    "bin": [
+        "bin/_km-functions.sh",
+        "bin/setup-km-project",
+        "bin/init-existing-km-project",
+        "bin/checkout-km-reset"
+    ],
+    "minimum-stability": "dev"
+}
