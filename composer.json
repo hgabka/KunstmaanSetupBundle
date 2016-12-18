@@ -1,12 +1,12 @@
 {
-    "name": "hgabka/kunstmaan-setup-bundle",
+    "name": "webtown/kunstmaan-setup-bundle",
     "require": {
         "kunstmaan/bundles-cms": "dev-master"
     },
     "authors": [
         {
-            "name": "Gabe",
-            "email": "hgabka@gmail.com"
+            "name": "Krisztián Ferenczi",
+            "email": "ferenczi.krisztian@gmail.com"
         }
     ],
     "bin": [
