@@ -1,5 +1,5 @@
 {
-    "name": "webtown/kunstmaan-setup-bundle",
+    "name": "hgabka/kunstmaan-setup-bundle",
     "require": {
         "kunstmaan/bundles-cms": "dev-master"
     },
