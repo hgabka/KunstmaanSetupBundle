@@ -84,7 +84,7 @@ ${CONSOLE_COMMAND} doctrine:migrations:migrate --no-interaction
 
 echo_title "Load fixtures"
 if [[ ${LOAD_FIXTURES} == 2 ]]; then
-    ${CONSOLE_COMMAND} doctrine:fixtures:load --no-interaction --append
+    ${CONSOLE_COMMAND} doctrine:fixtures:load --append
 elif [[ ${LOAD_FIXTURES} == 3 ]]; then
     ${CONSOLE_COMMAND} doctrine:fixtures:load
 elif [[ ${LOAD_FIXTURES} == 1 ]]; then
