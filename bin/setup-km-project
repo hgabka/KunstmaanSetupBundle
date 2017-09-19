@@ -15,9 +15,8 @@ source `pwd`/`dirname $0`/_km-functions.sh
 ALLOW_DEFAULTS=0
 # 0=NO, 1=YES, 2=ASK
 USE_MIGRATION=2
-# 0=NO, 1=YES, 2=ASK
-LOAD_FIXTURES=2
-APPEND_FIXTURES=0
+# 0=NO, 1=YES, 2=APPEND, 3=ASK
+LOAD_FIXTURES=3
 
 BUNDLE_NAMESPACE=""
 BUNDLE_NAMESPACE_IS_VALID=0
@@ -47,7 +46,7 @@ while [[ $# > 0 ]]
         LOAD_FIXTURES=0
         ;;
         --append-fixtures)
-        APPEND_FIXTURES=1
+        LOAD_FIXTURES=2
         ;;
         --bundle-namespace)
         BUNDLE_NAMESPACE="$2"
@@ -145,9 +144,9 @@ else
 fi
 
 echo_title "Load fixtures"
-if [[ ${APPEND_FIXTURES} == 1 ]]; then
+if [[ ${LOAD_FIXTURES} == 2 ]]; then
     ${CONSOLE_COMMAND} doctrine:fixtures:load --no-interaction --append
-elif [[ ${LOAD_FIXTURES} == 2 ]]; then
+elif [[ ${LOAD_FIXTURES} == 3 ]]; then
     ${CONSOLE_COMMAND} doctrine:fixtures:load
 elif [[ ${LOAD_FIXTURES} == 1 ]]; then
     ${CONSOLE_COMMAND} doctrine:fixtures:load --no-interaction
