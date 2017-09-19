@@ -40,6 +40,8 @@ while [[ $# > 0 ]]
 done
 
 # ======================================================================================================================
+echo ${LOAD_FIXTURES}
+quit
 echo_title "First of all we are checking the software environment"
 echo "Check required programs. If you meet permission error, try run this script with $(tput setaf 3)sudo$(tput setaf 7)!"
 # Check NodeJS is exist
