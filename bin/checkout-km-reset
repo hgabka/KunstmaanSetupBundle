@@ -49,9 +49,9 @@ ${CONSOLE_COMMAND} doctrine:database:create
 ${CONSOLE_COMMAND} doctrine:migrations:migrate --no-interaction
 
 read -p "Load fixtures? ([y]es, [N]o or [a]ppend)" LOAD_FIXTURES
-if [[ $LOAD_FIXTURES == 'y' ]] ; then
+if [[ "$LOAD_FIXTURES" == "y" ]] ; then
     ${CONSOLE_COMMAND} doctrine:fixtures:load --no-interaction
- elif [[ $LOAD_FIXTURES == 'a' ]] ; then
+ elif [[ "$LOAD_FIXTURES" == "a" ]] ; then
     ${CONSOLE_COMMAND} doctrine:fixtures:load --append
 fi
 
