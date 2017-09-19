@@ -51,8 +51,10 @@ ${CONSOLE_COMMAND} doctrine:migrations:migrate --no-interaction
 read -p "Load fixtures? ([y]es, [N]o or [a]ppend) " LOAD_FIXTURES
 if [[ "$LOAD_FIXTURES" == "y" ]] ; then
     ${CONSOLE_COMMAND} doctrine:fixtures:load --no-interaction
- elif [[ "$LOAD_FIXTURES" == "a" ]] ; then
+elif [[ "$LOAD_FIXTURES" == "a" ]] ; then
     ${CONSOLE_COMMAND} doctrine:fixtures:load --append
+else
+    echo "Skipping fixtures"
 fi
 
 ${CONSOLE_COMMAND} assets:install --symlink
