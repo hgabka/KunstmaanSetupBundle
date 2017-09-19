@@ -52,7 +52,7 @@ read -p "Load fixtures? ([y]es, [N]o or [a]ppend)" LOAD_FIXTURES
 if [[ $LOAD_FIXTURES == 'y' ]] ; then
     ${CONSOLE_COMMAND} doctrine:fixtures:load --no-interaction
  elif [[ $LOAD_FIXTURES == 'a' ]] ; then
-    ${CONSOLE_COMMAND} doctrine:fixtures:load --no-interaction --append
+    ${CONSOLE_COMMAND} doctrine:fixtures:load --append
 fi
 
 ${CONSOLE_COMMAND} assets:install --symlink
